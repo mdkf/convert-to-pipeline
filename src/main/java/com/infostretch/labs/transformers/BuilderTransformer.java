@@ -88,7 +88,7 @@ public class BuilderTransformer {
                                     transformer.buildSteps.append("\n" + snippet + "\n");
                                     genericFallbackApplied = true;
                                 }
-                            } catch (Exception ex) {
+                            } catch (UnsupportedOperationException ex) {
                                 Logger.getLogger(BuilderTransformer.class.getName()).log(Level.WARNING, ex.getMessage());
                             }
                             if (!genericFallbackApplied) {
@@ -111,10 +111,25 @@ public class BuilderTransformer {
                         Constructor<Plugins> pluginConstructor = pluginClass.getConstructor(Transformer.class, Node.class);
                         Plugins plugin = pluginConstructor.newInstance(transformer, builder);
                         plugin.transformBuild();
-                    } else {
-                        PluginIgnoredClass ignoredPlugin = PluginIgnoredClass.searchByValue(builder.getNodeName());
-                        if(ignoredPlugin == null) {
-                            transformer.buildSteps.append("\n// Unable to convert a build step referring to \"" + builder.getNodeName() + "\". Please verify and convert manually if required.");
+                    } 
+                    else {
+                            boolean genericFallbackApplied = false;
+                            try {
+                                Object o = Items.XSTREAM2.fromXML(XMLUtil.nodeToString(builder));
+                                if (o instanceof SimpleBuildStep) {
+                                    CoreStep step = new CoreStep((SimpleBuildStep) o);
+                                    String snippet = SnippetizerUtil.object2Groovy(new StringBuilder(), step, false);
+                                    transformer.buildSteps.append("\n" + snippet + "\n");
+                                    genericFallbackApplied = true;
+                                }
+                            } catch (UnsupportedOperationException ex) {
+                                Logger.getLogger(BuilderTransformer.class.getName()).log(Level.WARNING, ex.getMessage());
+                                }
+                        if (!genericFallbackApplied) {
+                            PluginIgnoredClass ignoredPlugin = PluginIgnoredClass.searchByValue(builder.getNodeName());
+                            if(ignoredPlugin == null) {
+                                transformer.buildSteps.append("\n// Unable to convert a build step referring to \"" + builder.getNodeName() + "\". Please verify and convert manually if required.");
+                            }
                         }
                     }
                 } catch (Exception e) {

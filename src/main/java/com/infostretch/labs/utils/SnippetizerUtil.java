@@ -1,5 +1,6 @@
 package com.infostretch.labs.utils;
 
+import java.lang.reflect.InvocationTargetException;
 import org.jenkinsci.plugins.workflow.cps.Snippetizer;
 
 import java.lang.reflect.Method;
@@ -12,7 +13,7 @@ public class SnippetizerUtil {
             Method m = Snippetizer.class.getDeclaredMethod("object2Groovy", StringBuilder.class, Object.class, boolean.class);
             m.setAccessible(true);
             return m.invoke(null, b, o, nestedExp).toString();
-        } catch (Exception ex) {
+        } catch (IllegalAccessException | IllegalArgumentException | NoSuchMethodException | SecurityException | InvocationTargetException ex) {
             Logger.getLogger(SnippetizerUtil.class.getName()).log(Level.INFO, "Failed to convert snippetize " + o.getClass().getName());
             // can't happen
         }
