@@ -33,7 +33,7 @@ public class BatchFile extends Plugins{
     }
 
     @Override
-    public void transformBuild() {
+    public void transform() {
         appendBuildSteps("\t\t// Batch build step");
         Element unstableReturn = getElementByTag("unstableReturn");
         String unstableValue = "";

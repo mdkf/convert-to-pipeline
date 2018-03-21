@@ -33,7 +33,7 @@ public class Shell extends Plugins {
     }
 
     @Override
-    public void transformBuild() {
+    public void transform() {
         appendBuildSteps("\t\t// Shell build step");
         Element unstableReturn = getElementByTag("unstableReturn");
         String unstableValue = "";

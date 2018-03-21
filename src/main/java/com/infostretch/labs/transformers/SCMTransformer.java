@@ -58,7 +58,7 @@ public class SCMTransformer {
                 if(pluginClass != null) {
                     Constructor<Plugins> pluginConstructor = pluginClass.getConstructor(Transformer.class, Node.class);
                     Plugins plugin = pluginConstructor.newInstance(transformer, scm);
-                    plugin.transformSCM();
+                    plugin.transform();
                 } else {
                     PluginIgnoredClass ignoredPlugin = PluginIgnoredClass.searchByValue(scmType);
                     if(ignoredPlugin == null) {

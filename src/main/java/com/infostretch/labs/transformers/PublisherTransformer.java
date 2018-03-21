@@ -17,20 +17,10 @@
 
 package com.infostretch.labs.transformers;
 
-import com.infostretch.labs.plugins.Plugins;
-import com.infostretch.labs.utils.PluginIgnoredClass;
-import com.infostretch.labs.utils.XMLUtil;
-import hudson.model.Items;
-import jenkins.tasks.SimpleBuildStep;
-import com.infostretch.labs.utils.SnippetizerUtil;
-import org.jenkinsci.plugins.workflow.steps.CoreStep;
+import com.infostretch.labs.utils.TransformerUtil;
 import org.w3c.dom.Element;
-import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
 
-import java.lang.reflect.Constructor;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 
 /**
  * PublisherTransformer handles the conversion of publishers (post build actions) in
@@ -62,7 +52,7 @@ public class PublisherTransformer {
     }
 
     /**
-     * Converts all publisher steps in FreeStyle job.
+     * Converts all node steps in FreeStyle job.
      *
      * Some cases below may be added to transformer.buildSteps instead of transformer.publishSteps.
      * This is to reduce unnecessary stages.
@@ -73,45 +63,13 @@ public class PublisherTransformer {
             Element publishers = (Element) transformer.doc.getElementsByTagName("publishers").item(0);
             NodeList publishersList = publishers.getChildNodes();
             transformer.publishSteps = new StringBuffer();
-            onlyBuildTrigger = true;
             if (publishersList.getLength() > 0) {
                 transformer.publishSteps.append("\n\tstage ('"+transformer.currentJobName+" - Post build actions') {");
                 transformer.publishSteps.append("\n/*\nPlease note this is a direct conversion of post-build actions. \nIt may not necessarily work/behave in the same way as post-build actions work.\nA logic review is suggested.\n*/");
             }
-            for (int i = 1; i < publishersList.getLength(); i = i + 2) {
-                Node publisher = publishersList.item(i);
-                try {
-                    Class pluginClass = Plugins.getPluginClass(publisher.getNodeName());
-                    if(pluginClass != null) {
-                        Constructor<Plugins> pluginConstructor = pluginClass.getConstructor(Transformer.class, Node.class);
-                        Plugins plugin = pluginConstructor.newInstance(transformer, publisher);
-                        plugin.transformPublisher();
-                    } else {
-                        boolean genericFallbackApplied = false;
-                        try {
-                            Object o = Items.XSTREAM2.fromXML(XMLUtil.nodeToString(publisher));
-                            if (o instanceof SimpleBuildStep) {
-                                CoreStep step = new CoreStep((SimpleBuildStep) o);
-                                String snippet = SnippetizerUtil.object2Groovy(new StringBuilder(), step, false);
-                                if (snippet != null) {
-                                    transformer.publishSteps.append("\n" + snippet + "\n");
-                                    genericFallbackApplied = true;
-                                    onlyBuildTrigger = false;
-                                }
-                            }
-                        } catch (Exception ex) {
-                            Logger.getLogger(BuilderTransformer.class.getName()).log(Level.WARNING, ex.getMessage());
-                        }
-                        if (!genericFallbackApplied) {
-                            PluginIgnoredClass ignoredPlugin = PluginIgnoredClass.searchByValue(publisher.getNodeName());
-                            if (ignoredPlugin == null) {
-                                transformer.publishSteps.append("\n// Unable to convert a post-build action referring to \"" + publisher.getNodeName() + "\". Please verify and convert manually if required.");
-                            }
-                        }
-                    }
-                } catch (Exception e) {
-                    e.printStackTrace();
-                }
+            String result=TransformerUtil.doIt(publishersList, transformer);
+            if (result!=null){
+                transformer.publishSteps.append(result);
             }
             if (transformer.buildersList.getLength() > 0) {
                 if (transformer.jdk != null && !transformer.jdk.getTextContent().equals("(System)")) {
@@ -124,9 +82,10 @@ public class PublisherTransformer {
             if (publishersList.getLength() > 0) {
                 transformer.publishSteps.append(" \n\t}");
             }
-            if(!onlyBuildTrigger) {
-                transformer.appendToScript(transformer.publishSteps.toString());
-            }
+            transformer.appendToScript(transformer.publishSteps.toString());
         }
     }
+
+    
+
 }

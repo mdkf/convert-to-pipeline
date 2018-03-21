@@ -35,7 +35,7 @@ public class Ant extends Plugins {
     }
 
     @Override
-    public void transformBuild() {
+    public void transform() {
         transformer.buildSteps.append("\t\t// Ant build step");
         StringBuffer antTargets = new StringBuffer();
         StringBuffer withEnv = new StringBuffer();

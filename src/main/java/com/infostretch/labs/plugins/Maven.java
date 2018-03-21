@@ -35,7 +35,7 @@ public class Maven extends Plugins {
     }
 
     @Override
-    public void transformBuild() {
+    public void transform() {
         appendBuildSteps("\t\t// Maven build step");
         Element settingsPath = null;
         Element globalSettingsPath = null;

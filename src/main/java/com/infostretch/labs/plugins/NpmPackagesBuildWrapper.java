@@ -33,7 +33,7 @@ public class NpmPackagesBuildWrapper extends Plugins {
     }
 
     @Override
-    public void transformBuildWrapper() {
+    public void transform() {
         Element nodeJS = getElementByTag("nodeJSInstallationName");
         if(nodeJS != null) {
             appendBuildSteps("\ndef nodeHome = tool '"+nodeJS.getTextContent()+"'\n env.PATH=\"${env.PATH}:${nodeHome}/bin\"\n");

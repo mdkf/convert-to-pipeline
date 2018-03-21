@@ -32,7 +32,7 @@ public class CheckStylePublisher extends Plugins {
     }
 
     @Override
-    public void transformPublisher() {
+    public void transform() {
         appendBuildSteps("\n\t\t// Checkstyle report");
         appendBuildSteps("\n\t\tstep([$class: 'CheckStylePublisher', canComputeNew: "+!Boolean.valueOf(getElementByTag("dontComputeNew").getTextContent())+", defaultEncoding: '', healthy: '90', pattern: '"+getElementByTag("pattern").getTextContent()+"', unHealthy: '40'])");
     }

@@ -47,7 +47,7 @@ public class Git extends Plugins {
     public Git(){}
 
     @Override
-    public void transformSCM() {
+    public void transform() {
         String repoURL = "", branch = "", repoCredentials = "";
         NodeList scmProps = node.getChildNodes();
         for (int i = 1; i < scmProps.getLength(); i = i + 2) {

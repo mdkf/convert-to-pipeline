@@ -33,7 +33,7 @@ public class ArtifactArchiver extends Plugins {
     }
 
     @Override
-    public void transformPublisher() {
+    public void transform() {
         transformer.publishSteps.append("\n\t\t// Artifact Archiver");
         String excludesValues = "";
         Element artifacts = getElementByTag("artifacts");

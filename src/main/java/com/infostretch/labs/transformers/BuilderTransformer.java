@@ -17,20 +17,10 @@
 
 package com.infostretch.labs.transformers;
 
-import com.infostretch.labs.plugins.Plugins;
-import com.infostretch.labs.utils.PluginIgnoredClass;
-import com.infostretch.labs.utils.XMLUtil;
-import hudson.model.Items;
-import jenkins.tasks.SimpleBuildStep;
-import com.infostretch.labs.utils.SnippetizerUtil;
-import org.jenkinsci.plugins.workflow.steps.CoreStep;
+import com.infostretch.labs.utils.TransformerUtil;
 import org.w3c.dom.Element;
-import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
 
-import java.lang.reflect.Constructor;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 
 /**
  * BuilderTransformer handles the conversion of build steps in
@@ -70,71 +60,14 @@ public class BuilderTransformer {
             Element buildWrappers = (Element) transformer.doc.getElementsByTagName("buildWrappers").item(0);
             if (buildWrappers != null) {
                 NodeList buildWrappersList = buildWrappers.getChildNodes();
-                for (int i = 1; i < buildWrappersList.getLength(); i = i + 2) {
-                    Node buildWrapper = buildWrappersList.item(i);
-                    try {
-                        Class pluginClass = Plugins.getPluginClass(buildWrapper.getNodeName());
-                        if(pluginClass != null) {
-                            Constructor<Plugins> pluginConstructor = pluginClass.getConstructor(Transformer.class, Node.class);
-                            Plugins plugin = pluginConstructor.newInstance(transformer, buildWrapper);
-                            plugin.transformBuildWrapper();
-                        } else {
-                            boolean genericFallbackApplied = false;
-                            try {
-                                Object o = Items.XSTREAM2.fromXML(XMLUtil.nodeToString(buildWrapper));
-                                if (o instanceof SimpleBuildStep) {
-                                    CoreStep step = new CoreStep((SimpleBuildStep) o);
-                                    String snippet = SnippetizerUtil.object2Groovy(new StringBuilder(), step, false);
-                                    transformer.buildSteps.append("\n" + snippet + "\n");
-                                    genericFallbackApplied = true;
-                                }
-                            } catch (UnsupportedOperationException ex) {
-                                Logger.getLogger(BuilderTransformer.class.getName()).log(Level.WARNING, ex.getMessage());
-                            }
-                            if (!genericFallbackApplied) {
-                                PluginIgnoredClass ignoredPlugin = PluginIgnoredClass.searchByValue(buildWrapper.getNodeName());
-                                if (ignoredPlugin == null) {
-                                    transformer.buildSteps.append("\n// Unable to convert a build step referring to \"" + buildWrapper.getNodeName() + "\". Please verify and convert manually if required.");
-                                }
-                            }
-                        }
-                    } catch (Exception e) {
-                        e.printStackTrace();
-                    }
+                String result=TransformerUtil.doIt(buildWrappersList, transformer);
+                if (result!=null){
+                    transformer.buildSteps.append(result);
                 }
             }
-            for (int i = 1; i < transformer.buildersList.getLength(); i = i + 2) {
-                Node builder = transformer.buildersList.item(i);
-                try {
-                    Class pluginClass = Plugins.getPluginClass(builder.getNodeName());
-                    if(pluginClass != null) {
-                        Constructor<Plugins> pluginConstructor = pluginClass.getConstructor(Transformer.class, Node.class);
-                        Plugins plugin = pluginConstructor.newInstance(transformer, builder);
-                        plugin.transformBuild();
-                    } 
-                    else {
-                            boolean genericFallbackApplied = false;
-                            try {
-                                Object o = Items.XSTREAM2.fromXML(XMLUtil.nodeToString(builder));
-                                if (o instanceof SimpleBuildStep) {
-                                    CoreStep step = new CoreStep((SimpleBuildStep) o);
-                                    String snippet = SnippetizerUtil.object2Groovy(new StringBuilder(), step, false);
-                                    transformer.buildSteps.append("\n" + snippet + "\n");
-                                    genericFallbackApplied = true;
-                                }
-                            } catch (UnsupportedOperationException ex) {
-                                Logger.getLogger(BuilderTransformer.class.getName()).log(Level.WARNING, ex.getMessage());
-                                }
-                        if (!genericFallbackApplied) {
-                            PluginIgnoredClass ignoredPlugin = PluginIgnoredClass.searchByValue(builder.getNodeName());
-                            if(ignoredPlugin == null) {
-                                transformer.buildSteps.append("\n// Unable to convert a build step referring to \"" + builder.getNodeName() + "\". Please verify and convert manually if required.");
-                            }
-                        }
-                    }
-                } catch (Exception e) {
-                    e.printStackTrace();
-                }
+            String result=TransformerUtil.doIt(transformer.buildersList, transformer);
+            if (result!=null){
+                transformer.buildSteps.append(result);
             }
         }
     }

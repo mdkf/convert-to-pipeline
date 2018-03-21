@@ -33,7 +33,7 @@ public class JUnitResultArchiver extends Plugins {
     }
 
     @Override
-    public void transformPublisher() {
+    public void transform() {
         appendBuildSteps("\n\t\t// JUnit Results");
         Element reportFilenamePattern = getElementByTag("testResults");
         appendBuildSteps("\n\t\tjunit '"+reportFilenamePattern.getTextContent()+"'");

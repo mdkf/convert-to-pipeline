@@ -32,7 +32,7 @@ public class AnsiblePlaybookBuilder extends Plugins {
     }
 
     @Override
-    public void transformBuild() {
+    public void transform() {
         appendBuildSteps("\t\t// Ansible playbook");
         appendBuildSteps("\nansiblePlaybook colorized: "+getElementByTag("colorizedOutput").getTextContent()+", installation: '"+getElementByTag("ansibleName").getTextContent()+"', inventory: '"+getElementByTag("inventory").getTextContent().trim()+"', playbook: '"+getElementByTag("playbook").getTextContent()+"', sudoUser: null\n");
     }

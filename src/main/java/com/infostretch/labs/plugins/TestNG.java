@@ -32,7 +32,7 @@ public class TestNG extends Plugins {
     }
 
     @Override
-    public void transformPublisher() {
+    public void transform() {
         appendBuildSteps("\n\t\t// TestNG Results");
         String testNG_Params = "";
         StringBuffer testNGParams = new StringBuffer();

@@ -67,22 +67,7 @@ public abstract class Plugins {
     /**
      * Method to be overridden by subclass when transforming build steps.
      */
-    public void transformBuild() {}
-
-    /**
-     * Method to be overridden by subclass when transforming post-build actions.
-     */
-    public void transformPublisher() {}
-
-    /**
-     * Method to be overridden by subclass when transforming build-wrappers.
-     */
-    public void transformBuildWrapper() {}
-
-    /**
-     * Method to be overridden by subclass when transforming SCM.
-     */
-    public void transformSCM(){}
+    public void transform() {}
 
     /**
      * Method to be overridden by subclass when pushing Jenkinsfile.
