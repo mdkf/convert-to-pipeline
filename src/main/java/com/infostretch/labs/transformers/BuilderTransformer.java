@@ -19,6 +19,7 @@ package com.infostretch.labs.transformers;
 
 import com.infostretch.labs.utils.TransformerUtil;
 import org.w3c.dom.Element;
+import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
 
 
@@ -60,14 +61,20 @@ public class BuilderTransformer {
             Element buildWrappers = (Element) transformer.doc.getElementsByTagName("buildWrappers").item(0);
             if (buildWrappers != null) {
                 NodeList buildWrappersList = buildWrappers.getChildNodes();
-                String result=TransformerUtil.doIt(buildWrappersList, transformer);
+                for (int i = 1; i < buildWrappersList.getLength(); i = i + 2) {
+                    Node node = buildWrappersList.item(i);
+                    String result=TransformerUtil.doIt(node, transformer);
+                    if (result!=null){
+                        transformer.buildSteps.append(result);
+                    }
+                }
+            }
+            for (int i = 1; i < transformer.buildersList.getLength(); i = i + 2) {
+                Node node = transformer.buildersList.item(i);
+                String result=TransformerUtil.doIt(node, transformer);
                 if (result!=null){
                     transformer.buildSteps.append(result);
                 }
-            }
-            String result=TransformerUtil.doIt(transformer.buildersList, transformer);
-            if (result!=null){
-                transformer.buildSteps.append(result);
             }
         }
     }

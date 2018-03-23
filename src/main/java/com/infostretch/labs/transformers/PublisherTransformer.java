@@ -19,6 +19,7 @@ package com.infostretch.labs.transformers;
 
 import com.infostretch.labs.utils.TransformerUtil;
 import org.w3c.dom.Element;
+import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
 
 
@@ -68,7 +69,11 @@ public class PublisherTransformer {
                 transformer.publishSteps.append("\n\tstage ('"+transformer.currentJobName+" - Post build actions') {");
                 transformer.publishSteps.append("\n/*\nPlease note this is a direct conversion of post-build actions. \nIt may not necessarily work/behave in the same way as post-build actions work.\nA logic review is suggested.\n*/");
             }
-            String result=TransformerUtil.doIt(publishersList, transformer);
+            String result=null;
+            for (int i = 1; i < publishersList.getLength(); i = i + 2) {
+                Node node = publishersList.item(i);
+                result+=TransformerUtil.doIt(node, transformer);
+            }
             if (result!=null){
                 transformer.publishSteps.append(result);
             }
