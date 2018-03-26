@@ -69,14 +69,15 @@ public class PublisherTransformer {
                 transformer.publishSteps.append("\n\tstage ('"+transformer.currentJobName+" - Post build actions') {");
                 transformer.publishSteps.append("\n/*\nPlease note this is a direct conversion of post-build actions. \nIt may not necessarily work/behave in the same way as post-build actions work.\nA logic review is suggested.\n*/");
             }
-            String result=null;
+
             for (int i = 1; i < publishersList.getLength(); i = i + 2) {
                 Node node = publishersList.item(i);
-                result+=TransformerUtil.doIt(node, transformer);
+                String result = TransformerUtil.doIt(node, transformer);
+                if (result!=null){
+                    transformer.publishSteps.append(result);
+                }
             }
-            if (result!=null){
-                transformer.publishSteps.append(result);
-            }
+
             if (transformer.buildersList.getLength() > 0) {
                 if (transformer.jdk != null && !transformer.jdk.getTextContent().equals("(System)")) {
                     transformer.buildSteps.append(" \n\t}\n}");
