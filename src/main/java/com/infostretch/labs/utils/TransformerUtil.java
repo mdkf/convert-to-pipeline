@@ -10,13 +10,17 @@ import com.infostretch.labs.plugins.Plugins;
 import com.infostretch.labs.transformers.BuilderTransformer;
 import hudson.model.Items;
 import jenkins.tasks.SimpleBuildStep;
+import hudson.tasks.CommandInterpreter;
 import org.jenkinsci.plugins.workflow.steps.CoreStep;
 import org.w3c.dom.Node;
-import org.w3c.dom.NodeList;
+
 
 import java.lang.reflect.Constructor;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import org.jenkinsci.plugins.workflow.steps.durable_task.BatchScriptStep;
+import org.jenkinsci.plugins.workflow.steps.durable_task.DurableTaskStep;
+import org.jenkinsci.plugins.workflow.steps.durable_task.ShellStep;
 
 
 /**
@@ -42,27 +46,55 @@ public class TransformerUtil {
                     result=makeSnippet(node);
                 }
             } catch (Exception e) {
-                e.printStackTrace();
+                e.printStackTrace(System.err);
             }
         }
         return result;
     }
 
     private static String makeSnippet(Node node) {
-        String toReturn = "\n// Unable to convert a build step referring to \"" + node.getNodeName() + "\". Please verify and convert manually if required.";
-        try {
-            Object o = Items.XSTREAM2.fromXML(XMLUtil.nodeToString(node));
-            if (o instanceof SimpleBuildStep) {
-                CoreStep step = new CoreStep((SimpleBuildStep) o);
-                String snippet = SnippetizerUtil.object2Groovy(new StringBuilder(), step, false);
-                if (snippet != null) {
-                    toReturn=("\n" + snippet + "\n");
-                }
-                else{
-                    toReturn=("\n// empty snippet returned by "+o.toString()+"\n");
-                }
+        Object o = Items.XSTREAM2.fromXML(XMLUtil.nodeToString(node));
+        if (o instanceof SimpleBuildStep){
+            CoreStep step = new CoreStep((SimpleBuildStep)o);
+            return callSnippetizer(node, step);
+        }
+        else if (o instanceof hudson.tasks.BatchFile){
+            hudson.tasks.BatchFile bf= (hudson.tasks.BatchFile)o;
+            BatchScriptStep step=new BatchScriptStep(bf.getCommand());
+            Integer unstableReturnValue=bf.getUnstableReturn();
+            if (unstableReturnValue != null && !unstableReturnValue.equals(0)){
+                step.setReturnStatus(true);
+                return "def returnValue = "+callSnippetizer(node, step)+"\n if(returnValue=="+unstableReturnValue+") {\n\t currentBuild.result='UNSTABLE'\n}";
             }
-        } catch (UnsupportedOperationException ex) {
+            else{
+                return callSnippetizer(node, step);
+            }
+        }
+        else if (o instanceof hudson.tasks.Shell){
+            hudson.tasks.Shell sh=(hudson.tasks.Shell)o;
+            DurableTaskStep step=new ShellStep(sh.getCommand());
+            Integer unstableReturnValue=sh.getUnstableReturn();
+            if (unstableReturnValue != null && !unstableReturnValue.equals(0)){
+                step.setReturnStatus(true);
+                return "def returnValue = "+callSnippetizer(node, step)+"\n if(returnValue=="+unstableReturnValue+") {\n\t currentBuild.result='UNSTABLE'\n}";
+            }
+        }
+
+        return "//"+ node.getNodeName()+" is of type "+o.getClass().getSuperclass()+" and will be skipped\n"; 
+    }
+
+    private static String callSnippetizer(Node node, org.jenkinsci.plugins.workflow.steps.Step o) {
+        String toReturn="\n// Unable to convert a build step referring to \"" + node.getNodeName() + "\". Please verify and convert manually if required.";
+        try {
+            String snippet = SnippetizerUtil.object2Groovy(new StringBuilder(), o, false);
+            if (snippet != null) {
+                toReturn=(snippet + "\n");
+            }
+            else{
+                toReturn=("\n// empty snippet returned by "+o.toString()+"\n");
+            }
+        }
+        catch (UnsupportedOperationException ex) {
             Logger.getLogger(BuilderTransformer.class.getName()).log(Level.WARNING, ex.getMessage());
         }
         return toReturn;

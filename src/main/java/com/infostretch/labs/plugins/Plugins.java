@@ -26,6 +26,7 @@ import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 import org.w3c.dom.Node;
 import java.io.File;
+import org.w3c.dom.NodeList;
 
 /**
  * Super class for plugins. This class is extended by every plugin whose transformation support is to be added.
@@ -103,6 +104,10 @@ public abstract class Plugins {
      */
     protected final Element getElementByTag(String tag) {
         return (Element) ((Element) node).getElementsByTagName(tag).item(0);
+    }
+    
+    protected final NodeList getElementsByTag(String tag) {
+        return ((Element) node).getElementsByTagName(tag);
     }
 
     /**
