@@ -21,14 +21,13 @@ import com.infostretch.labs.utils.ActionUtil;
 import hudson.Extension;
 import hudson.model.*;
 import hudson.util.FormValidation;
-import jenkins.model.Jenkins;
-import jenkins.model.TransientActionFactory;
-import org.kohsuke.stapler.*;
-
-import javax.servlet.ServletException;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
+import javax.servlet.ServletException;
+import jenkins.model.Jenkins;
+import jenkins.model.TransientActionFactory;
+import org.kohsuke.stapler.*;
 
 /**
  * Handle job level convert action.

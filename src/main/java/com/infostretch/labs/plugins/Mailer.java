@@ -17,7 +17,6 @@
 
 package com.infostretch.labs.plugins;
 
-import com.infostretch.labs.transformers.PublisherTransformer;
 import com.infostretch.labs.transformers.Transformer;
 import org.w3c.dom.Node;
 

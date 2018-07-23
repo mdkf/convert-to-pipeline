@@ -5,23 +5,25 @@
  */
 package com.infostretch.labs.utils;
 
-import com.infostretch.labs.transformers.Transformer;
 import com.infostretch.labs.plugins.Plugins;
+import static com.infostretch.labs.plugins.Plugins.getPluginClass;
 import com.infostretch.labs.transformers.BuilderTransformer;
-import hudson.model.Items;
-import jenkins.tasks.SimpleBuildStep;
-import hudson.tasks.CommandInterpreter;
-import org.jenkinsci.plugins.workflow.steps.CoreStep;
-import org.w3c.dom.Node;
-
-
+import com.infostretch.labs.transformers.Transformer;
+import static com.infostretch.labs.utils.PluginIgnoredClass.searchByValue;
+import static com.infostretch.labs.utils.SnippetizerUtil.object2Groovy;
+import static com.infostretch.labs.utils.XMLUtil.nodeToString;
+import static hudson.model.Items.XSTREAM2;
 import java.lang.reflect.Constructor;
-import java.util.logging.Level;
-import java.util.logging.Logger;
+import java.lang.reflect.InvocationTargetException;
+
+import jenkins.tasks.SimpleBuildStep;
+import org.jenkinsci.plugins.workflow.steps.CoreStep;
 import org.jenkinsci.plugins.workflow.steps.durable_task.BatchScriptStep;
 import org.jenkinsci.plugins.workflow.steps.durable_task.DurableTaskStep;
 import org.jenkinsci.plugins.workflow.steps.durable_task.ShellStep;
-
+import org.w3c.dom.Node;
+import static java.util.logging.Level.WARNING;
+import static java.util.logging.Logger.getLogger;
 
 /**
  *
@@ -45,8 +47,7 @@ public class TransformerUtil {
                 } else {
                     result=makeSnippet(node);
                 }
-            } catch (Exception e) {
-                e.printStackTrace(System.err);
+            } catch (IllegalAccessException | IllegalArgumentException | InstantiationException | NoSuchMethodException | SecurityException | InvocationTargetException e) {
             }
         }
         return result;

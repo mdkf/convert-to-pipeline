@@ -1,11 +1,8 @@
 package com.infostretch.labs.utils;
 
-import java.lang.reflect.InvocationTargetException;
-import org.jenkinsci.plugins.workflow.cps.Snippetizer;
-
-import java.lang.reflect.Method;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import org.jenkinsci.plugins.workflow.cps.Snippetizer;
 
 public class SnippetizerUtil {
     public static String object2Groovy(StringBuilder b, Object o, boolean nestedExp) throws UnsupportedOperationException {

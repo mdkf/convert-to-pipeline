@@ -21,23 +21,25 @@ import com.infostretch.labs.plugins.Plugins;
 import com.infostretch.labs.utils.SCMUtil;
 import hudson.model.FreeStyleProject;
 import hudson.model.Item;
-import org.w3c.dom.Document;
-import org.w3c.dom.Element;
-import org.w3c.dom.Node;
-import org.w3c.dom.NodeList;
-
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.lang.reflect.Constructor;
+import java.lang.reflect.InvocationTargetException;
+import java.util.*;
+import java.util.logging.Logger;
 import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.parsers.ParserConfigurationException;
 import javax.xml.transform.OutputKeys;
 import javax.xml.transform.TransformerFactory;
 import javax.xml.transform.dom.DOMSource;
 import javax.xml.transform.stream.StreamResult;
-import java.io.ByteArrayInputStream;
-import java.io.ByteArrayOutputStream;
-import java.io.InputStream;
-import java.lang.reflect.Constructor;
-import java.util.*;
-import java.util.logging.Logger;
+import org.w3c.dom.Document;
+import org.w3c.dom.Element;
+import org.w3c.dom.Node;
+import org.w3c.dom.NodeList;
+import org.xml.sax.SAXException;
 
 /**
  * Transformer class is the main class that handles the conversion of
@@ -124,7 +126,7 @@ public class Transformer {
                     }
                 }
             }
-        } catch (Exception e) {
+        } catch (IOException | ParserConfigurationException | SAXException e) {
             logger.severe("Exception occurred in Transformer constructor: " + e.getMessage());
         }
     }
@@ -347,7 +349,7 @@ public class Transformer {
                 Plugins plugin = pluginConstructor.newInstance();
                 return plugin.writeCPSFlow(dest, scmURL, scmBranch, scmCredentialsId);
             }
-        } catch (Exception e) {
+        } catch (IllegalAccessException | IllegalArgumentException | InstantiationException | NoSuchMethodException | SecurityException | InvocationTargetException e) {
             e.printStackTrace();
         }
         return null;

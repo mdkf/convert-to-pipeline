@@ -22,14 +22,16 @@ import com.infostretch.labs.transformers.Transformer;
 import hudson.model.FreeStyleProject;
 import hudson.model.Item;
 import hudson.model.TopLevelItem;
-import jenkins.model.Jenkins;
-import org.kohsuke.stapler.StaplerRequest;
-import org.kohsuke.stapler.StaplerResponse;
-
-import javax.servlet.ServletException;
 import java.io.IOException;
+import java.io.InputStream;
 import java.util.HashMap;
 import java.util.Map;
+import javax.servlet.ServletException;
+import jenkins.model.Jenkins;
+import org.acegisecurity.AccessDeniedException;
+import org.jvnet.hudson.reactor.ReactorException;
+import org.kohsuke.stapler.StaplerRequest;
+import org.kohsuke.stapler.StaplerResponse;
 
 /**
  * ActionUtil is the class that provides the common logic for actions to handle the validation and conversion.
@@ -65,13 +67,13 @@ public class ActionUtil {
             if(orgJob != null) {
                 newName = defineName(newName, orgJob.getName());
                 if(orgJob.getParent().getClass().equals(Folder.class)) {
-                    item = ((Folder) orgJob.getParent()).getItem(newName);
+                    item = orgJob.getParent().getItem(newName);
                 }
                 else {
                     item = Jenkins.getInstance().getItem(newName);
                 }
             }
-        } catch (Exception e) {
+        } catch (AccessDeniedException e) {
             e.printStackTrace();
             return item == null;
         }
@@ -125,7 +127,7 @@ public class ActionUtil {
             Jenkins.getInstance().reload();
             response.sendRedirect2(newJob.getAbsoluteUrl());
         }
-        catch (Exception e) {
+        catch (IOException | InterruptedException | ReactorException e) {
             e.printStackTrace();
         }
     }
