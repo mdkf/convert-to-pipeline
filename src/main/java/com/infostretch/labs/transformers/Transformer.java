@@ -86,7 +86,8 @@ public class Transformer {
         logger.info("Completed conversion of all jobs");
     }
 
-    /** For testing pureposes */
+    /** For testing pureposes
+     * @param doc */
     public String transformXml(Document doc, String jobName) throws ParserConfigurationException {
         initializeConversion();
         this.doc = doc;
@@ -203,6 +204,11 @@ public class Transformer {
                         Node property = propertyChildren.item(i);
                         if(property.getNodeName().contains("DiskUsageProperty")) {
                             logger.info("Disk usage property found and discarded");
+                            property.getParentNode().removeChild(property);
+                            break;
+                        }
+                        if(property.getNodeName().contains("promoted__builds")) {
+                            logger.info("promoted__builds property found and discarded");
                             property.getParentNode().removeChild(property);
                             break;
                         }

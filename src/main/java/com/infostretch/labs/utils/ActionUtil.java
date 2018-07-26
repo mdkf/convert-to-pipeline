@@ -122,7 +122,10 @@ public class ActionUtil {
             } else {
                 Transformer transformer = new Transformer(params);
                 transformer.performFreeStyleTransformation();
-                newJob = Jenkins.getInstance().createProjectFromXML(newName, transformer.getStream());
+                InputStream is=transformer.getStream();
+                //String s= org.apache.commons.io.IOUtils.toString(is);
+                        //(is, StandardCharsets.UTF_8);
+                newJob = Jenkins.getInstance().createProjectFromXML(newName, is);
             }
             Jenkins.getInstance().reload();
             response.sendRedirect2(newJob.getAbsoluteUrl());

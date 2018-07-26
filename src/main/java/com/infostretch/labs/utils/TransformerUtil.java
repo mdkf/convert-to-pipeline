@@ -12,6 +12,7 @@ import com.infostretch.labs.transformers.Transformer;
 import static com.infostretch.labs.utils.PluginIgnoredClass.searchByValue;
 import static com.infostretch.labs.utils.SnippetizerUtil.object2Groovy;
 import static com.infostretch.labs.utils.XMLUtil.nodeToString;
+import hudson.model.Items;
 import static hudson.model.Items.XSTREAM2;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
@@ -47,13 +48,15 @@ public class TransformerUtil {
                 } else {
                     result=makeSnippet(node);
                 }
-            } catch (IllegalAccessException | IllegalArgumentException | InstantiationException | NoSuchMethodException | SecurityException | InvocationTargetException e) {
+            } catch (IllegalAccessException | IllegalArgumentException | InstantiationException | NoSuchMethodException | SecurityException | InvocationTargetException | ArrayIndexOutOfBoundsException e) {
+                int c=1;
             }
         }
         return result;
     }
 
     private static String makeSnippet(Node node) {
+        try {
         Object o = Items.XSTREAM2.fromXML(XMLUtil.nodeToString(node));
         if (o instanceof SimpleBuildStep){
             CoreStep step = new CoreStep((SimpleBuildStep)o);
@@ -73,22 +76,28 @@ public class TransformerUtil {
         }
         else if (o instanceof hudson.tasks.Shell){
             hudson.tasks.Shell sh=(hudson.tasks.Shell)o;
-            DurableTaskStep step=new ShellStep(sh.getCommand());
+            ShellStep step=new ShellStep(sh.getCommand());
             Integer unstableReturnValue=sh.getUnstableReturn();
             if (unstableReturnValue != null && !unstableReturnValue.equals(0)){
                 step.setReturnStatus(true);
                 return "def returnValue = "+callSnippetizer(node, step)+"\n if(returnValue=="+unstableReturnValue+") {\n\t currentBuild.result='UNSTABLE'\n}";
             }
+            else{
+                return callSnippetizer(node, step);
+            }
         }
-
-        return "//"+ node.getNodeName()+" is of type "+o.getClass().getSuperclass()+" and will be skipped\n"; 
+        }
+        catch (Exception e){
+            return "\n// Error in xml: "+node.toString()+"\n";
+        }
+        return "\n// Unable to convert a build step referring to \"" + node.getNodeName() + "\". Please verify and convert manually if required.\n";
     }
 
     private static String callSnippetizer(Node node, org.jenkinsci.plugins.workflow.steps.Step o) {
-        String toReturn="\n// Unable to convert a build step referring to \"" + node.getNodeName() + "\". Please verify and convert manually if required.";
+        String toReturn="\n// Unable to convert a build step referring to \"" + node.getNodeName() + "\". Please verify and convert manually if required.\n";
         try {
             String snippet = SnippetizerUtil.object2Groovy(new StringBuilder(), o, false);
-            if (snippet != null) {
+            if (snippet != null && snippet.length()>0) {
                 toReturn=(snippet + "\n");
             }
             else{
@@ -96,7 +105,7 @@ public class TransformerUtil {
             }
         }
         catch (UnsupportedOperationException ex) {
-            Logger.getLogger(BuilderTransformer.class.getName()).log(Level.WARNING, ex.getMessage());
+            getLogger(BuilderTransformer.class.getName()).log(WARNING, ex.getMessage());
         }
         return toReturn;
     }

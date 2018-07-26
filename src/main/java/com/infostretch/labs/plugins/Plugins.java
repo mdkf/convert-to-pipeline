@@ -161,10 +161,11 @@ public abstract class Plugins {
                 return Class.forName(pluginName);
             }
         }
-        catch (Error e) {
-            e.printStackTrace();
+        catch (ClassNotFoundException e)
+        {
         }
-        catch (Exception e) {
+        
+        catch (Error | Exception e) {
             e.printStackTrace();
         }
         return null;
