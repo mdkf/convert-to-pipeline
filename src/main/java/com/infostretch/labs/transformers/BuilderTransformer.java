@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright 2017 Infostretch Corporation
+ * Copyright 2018 Michael DK Fowler
  *
  * This program is free software: you can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation, either version 3 of the License, or any later version.
  *
@@ -11,30 +11,29 @@
  *
  * You should have received a copy of the GNU General Public License along with this program in the name of LICENSE.txt in the root folder of the distribution. If not, see https://opensource.org/licenses/gpl-3.0.html
  *
- *
- * For any inquiry or need additional information, please contact labs_support@infostretch.com
  *******************************************************************************/
 
 package com.infostretch.labs.transformers;
 
 import com.infostretch.labs.utils.TransformerUtil;
-import org.w3c.dom.Element;
-import org.w3c.dom.Node;
-import org.w3c.dom.NodeList;
-
+import static com.infostretch.labs.utils.TransformerUtil.doIt;
+import hudson.model.JDK;
+import hudson.tasks.BuildWrapper;
+import hudson.tasks.Builder;
+import java.util.List;
 
 /**
- * BuilderTransformer handles the conversion of build steps in
- * FreeStyle job configuration to pipeline Job configuration.
+ * BuilderTransformer handles the conversion of build wrappers and build steps
+ * in FreeStyle job configuration to pipeline Job configuration.
  *
- * @author Mohit Dharamshi
+ * @author MDKF
  */
 
 public class BuilderTransformer {
-    private Transformer transformer;
+    private final Transformer transformer;
 
     /**
-     * Initialise local Transformer variable. This constructor is called in main Transformer class.
+     * Initialize local Transformer variable. This constructor is called in main Transformer class.
      *
      * @param transformer Transformer object to be assigned to local Transformer variable.
      */
@@ -43,39 +42,35 @@ public class BuilderTransformer {
     }
 
     /**
-     * Converts all build steps in FreeStyle job.
+     * Convert the FreeStyle job.
      */
     public void convertBuilders() {
-
-        if (transformer.doc.getElementsByTagName("builders").getLength() > 0) {
-            Element builders = (Element) transformer.doc.getElementsByTagName("builders").item(0);
-            transformer.buildersList = builders.getChildNodes();
-            transformer.buildSteps = new StringBuffer();
-            if (transformer.buildersList.getLength() > 0) {
-                transformer.buildSteps.append("\n\tstage ('"+transformer.currentJobName+" - Build') {\n \t");
+        List<Builder> builders=transformer.job.getBuilders();
+        List<BuildWrapper> buildWrappers=transformer.job.getBuildWrappersList();
+        JDK jdk=transformer.job.getJDK();
+        transformer.buildSteps = new StringBuffer();
+        if (builders.size()> 0) {
+            transformer.buildSteps.append("\n\tstage ('"+transformer.currentJobName+" - Build') {\n \t");
+        }
+        if (jdk!=null){
+            transformer.buildSteps.append("\nwithEnv([\"JAVA_HOME=\"${ tool '"+jdk.getName()+"'}\"\n"+", \"PATH=${env.JAVA_HOME}/bin\"]) { \n");
+        }
+        for(BuildWrapper bw:buildWrappers){
+            String result=doIt(bw, transformer);
+            if (result!=null){
+                transformer.buildSteps.append(result);
             }
-            transformer.jdk = (Element) transformer.doc.getElementsByTagName("jdk").item(0);
-            if (transformer.jdk != null && !transformer.jdk.getTextContent().equals("(System)")) {
-                transformer.buildSteps.append("\nwithEnv([\"JAVA_HOME=${ tool '\"+JDK+\"' }\", \"PATH=${env.JAVA_HOME}/bin\"]) { \n");
+        }
+        for(Builder b:builders){
+           String result=doIt(b, transformer);
+            if (result!=null){
+                transformer.buildSteps.append(result);
             }
-            Element buildWrappers = (Element) transformer.doc.getElementsByTagName("buildWrappers").item(0);
-            if (buildWrappers != null) {
-                NodeList buildWrappersList = buildWrappers.getChildNodes();
-                for (int i = 1; i < buildWrappersList.getLength(); i = i + 2) {
-                    Node node = buildWrappersList.item(i);
-                    String result=TransformerUtil.doIt(node, transformer);
-                    if (result!=null){
-                        transformer.buildSteps.append(result);
-                    }
-                }
-            }
-            for (int i = 1; i < transformer.buildersList.getLength(); i = i + 2) {
-                Node node = transformer.buildersList.item(i);
-                String result=TransformerUtil.doIt(node, transformer);
-                if (result!=null){
-                    transformer.buildSteps.append(result);
-                }
-            }
+        }
+        if (jdk!=null){
+            transformer.buildSteps.append(" \n\t}\n}");
+        } else {
+            transformer.buildSteps.append(" \n\t}");
         }
     }
 }

@@ -17,30 +17,26 @@
 
 package com.infostretch.labs.transformers;
 
-import com.infostretch.labs.plugins.Plugins;
 import com.infostretch.labs.utils.SCMUtil;
 import hudson.model.FreeStyleProject;
 import hudson.model.Item;
-import java.io.ByteArrayInputStream;
-import java.io.ByteArrayOutputStream;
+import hudson.model.JobProperty;
+import hudson.scm.SCM;
+import hudson.triggers.Trigger;
 import java.io.IOException;
-import java.io.InputStream;
-import java.lang.reflect.Constructor;
-import java.lang.reflect.InvocationTargetException;
 import java.util.*;
+import java.util.logging.Level;
+import static java.util.logging.Level.SEVERE;
 import java.util.logging.Logger;
-import javax.xml.parsers.DocumentBuilderFactory;
-import javax.xml.parsers.ParserConfigurationException;
-import javax.xml.transform.OutputKeys;
-import javax.xml.transform.TransformerFactory;
-import javax.xml.transform.dom.DOMSource;
-import javax.xml.transform.stream.StreamResult;
-import org.w3c.dom.Document;
-import org.w3c.dom.Element;
-import org.w3c.dom.Node;
-import org.w3c.dom.NodeList;
-import org.xml.sax.SAXException;
-
+import static java.util.logging.Logger.getLogger;
+import jenkins.model.Jenkins;
+//import javax.xml.parsers.ParserConfigurationException;
+import org.jenkinsci.plugins.workflow.cps.CpsFlowDefinition;
+import org.jenkinsci.plugins.workflow.cps.CpsScmFlowDefinition;
+import org.jenkinsci.plugins.workflow.flow.FlowDefinition;
+import org.jenkinsci.plugins.workflow.job.WorkflowJob;
+//import org.w3c.dom.Element;
+//import org.w3c.dom.Node;
 /**
  * Transformer class is the main class that handles the conversion of
  * FreeStyle job configuration to pipeline Job configuration.
@@ -49,22 +45,26 @@ import org.xml.sax.SAXException;
  */
 
 public class Transformer {
-    private static final Logger logger = Logger.getLogger(Transformer.class.getName());
+    private static final Logger logger = getLogger(Transformer.class.getName());
 
-    private InputStream is;
-    private Element flowDefinition;
+    //private InputStream is;
+    //private Element flowDefinition;
     private String scmURL ="", scmCredentialsId = "", scmType = "", scmBranch = "";
-
-    protected Document doc, dest;
-    public Element jdk;
-    protected NodeList buildersList;
+    //protected Document doc;
+   // protected Document dest;
+    private org.jenkinsci.plugins.workflow.job.WorkflowJob destJob;
+    //public Element jdk;
+    //protected NodeList buildersList;
     public boolean firstJob = true;
-    public StringBuffer script, buildSteps, publishSteps;
+    public StringBuffer script=new StringBuffer(), buildSteps=new StringBuffer(), publishSteps=new StringBuffer();
     public String currentJobName = "", previousUrl = "", previousLabel = "";
-    private Map<String, Object> requestParams;
-    private List<String> copyConfigs = new ArrayList<>(Arrays.asList("description", "properties", "triggers"));
-    private List<String> transformConfigs = new ArrayList<>(Arrays.asList("label", "scm", "builders", "publishers"));
+    private final Map<String, Object> requestParams;
+    //private List<String> copyConfigs = new ArrayList<>(Arrays.asList("description", "properties", "triggers"));
+    //private List<String> transformConfigs = new ArrayList<>(Arrays.asList("label", "scm", "builders", "publishers"));
     private boolean onlyBuildTrigger = true;
+    protected FreeStyleProject job;
+    private String newJobName;
+    private SCM scm;
 
     /**
      * Constructor to initialise variables required to process transformation.
@@ -79,7 +79,8 @@ public class Transformer {
     /**
      * Initialises transformation process of Freestyle project to Pipeline.
      */
-    public void performFreeStyleTransformation() {
+    public void performFreeStyleTransformation(String name) {
+        newJobName=name;
         initializeConversion();
         transformJob((FreeStyleProject) requestParams.get("initialProject"), (boolean)requestParams.get("downStream"));
         finalizeConversion((boolean) requestParams.get("commitJenkinsfile"), requestParams.get("commitMessage").toString());
@@ -87,24 +88,23 @@ public class Transformer {
     }
 
     /** For testing pureposes
+     * @param jobName
      * @param doc */
-    public String transformXml(Document doc, String jobName) throws ParserConfigurationException {
+    /* public String transformXml(String jobName) throws ParserConfigurationException {
         initializeConversion();
-        this.doc = doc;
         this.currentJobName = jobName;
         transformDocument();
         finalizeConversion(false, "");
         return script.toString();
-    }
+    } */
 
     private void initializeConversion() {
-        appendToScript("// Powered by Infostretch \n\n");
         appendToScript("timestamps {\n");
     }
     private void finalizeConversion(boolean commitJenkinsfile, String commitMessage) {
         appendToScript("\n}\n}");
         appendScriptToXML(commitJenkinsfile, commitMessage);
-        writeConfiguration();
+        saveJob();
     }
 
     /**
@@ -115,77 +115,56 @@ public class Transformer {
      * @param downStream Boolean to decide if item's downstream jobs are to be converted.
      */
     private void transformJob(FreeStyleProject item, boolean downStream) {
-        try {
+
             currentJobName = item.getFullName();
-            doc = DocumentBuilderFactory.newInstance().newDocumentBuilder().parse(item.getConfigFile().getFile());
+            this.job=item;
+            //doc = DocumentBuilderFactory.newInstance().newDocumentBuilder().parse(item.getConfigFile().getFile());
             transformDocument();
             if (downStream) {
-                for (Item job : item.getDownstreamProjects()) {
-                    if (job instanceof FreeStyleProject) {
+                for (Item downstreamJob : item.getDownstreamProjects()) {
+                    if (downstreamJob instanceof FreeStyleProject) {
                         firstJob = false;
-                        transformJob((FreeStyleProject) job, true);
+                        transformJob((FreeStyleProject) downstreamJob, true);
                     }
                 }
             }
-        } catch (IOException | ParserConfigurationException | SAXException e) {
+     /*   } catch (Exception e) {
             logger.severe("Exception occurred in Transformer constructor: " + e.getMessage());
+        } */
+    }
+
+    protected void transformDocument() {
+        try {
+            destJob=Jenkins.getInstance().createProject(org.jenkinsci.plugins.workflow.job.WorkflowJob.class, newJobName);
+            transformFreestyleJob();
+        } catch (IOException ex) {
+            logger.severe("Error Creating job: "+ex.getMessage());
         }
-    }
-
-    protected void transformDocument() throws ParserConfigurationException {
-        dest = DocumentBuilderFactory.newInstance().newDocumentBuilder().newDocument();
-        flowDefinition = dest.createElement("flow-definition");
-        dest.appendChild(flowDefinition);
-        doc.getDocumentElement().normalize();
-        transformFile();
-    }
-
-    /**
-     * Returns the input stream which consists of the entire XML structure of the new pipeline job.
-     *
-     * @return InputStream of XML structure of the new pipeline job.
-     */
-    public InputStream getStream() {
-        return is;
     }
 
     /**
      * Calls 'copy' or 'transformers' methods of various configurations of a FreeStyle job.
      */
-    private void transformFile() {
-        copyConfigurations(copyConfigs);
-        transformConfigurations(transformConfigs);
-    }
-
-    /**
-     * Calls respective methods that convert configurations.
-     *
-     * @param configurations List of configuration to convert.
-     */
-    private void transformConfigurations(List<String> configurations) {
-        for (String config: configurations) {
-            logger.info("Transforming configuration: " + config.toUpperCase());
-            switch (config) {
-                case "label":
-                    transformLabel();
-                    break;
-                case "scm":
-                    SCMTransformer scmTransformer = new SCMTransformer(this);
-                    scmTransformer.convertSCM();
-                    break;
-                case "builders":
-                    BuilderTransformer builderTransformer = new BuilderTransformer(this);
-                    builderTransformer.convertBuilders();
-                    break;
-                case "publishers":
-                    PublisherTransformer publisherTransformer = new PublisherTransformer(this);
-                    publisherTransformer.convertPublishers();
-                    break;
-                default:
-                    break;
-            }
+    private void transformFreestyleJob() {
+        copyConfigurations();
+        logger.info("Transforming Label");
+        transformLabel();
+        logger.info("Transforming SCM");
+        SCMTransformer scmTransformer = new SCMTransformer(this);
+        scmTransformer.convertSCM();
+        this.scm=scmTransformer.getScm();
+        logger.info("Transforming Builders");
+        BuilderTransformer builderTransformer = new BuilderTransformer(this);
+        builderTransformer.convertBuilders();
+        logger.info("Transforming Publishers");
+        PublisherTransformer publisherTransformer = new PublisherTransformer(this);
+        publisherTransformer.convertPublishers();
+        this.appendToScript(this.buildSteps.toString());
+        if(!this.getOnlyBuildTrigger()) {
+            this.appendToScript(this.publishSteps.toString());
         }
     }
+
 
     /**
      * Copies known configurations that are identical in pipeline jobs.
@@ -193,39 +172,45 @@ public class Transformer {
      *
      * @param configurations List of configurations to copy.
      */
-    private void copyConfigurations(List<String> configurations) {
-        for (String configuration: configurations) {
-            logger.info("Transforming configuration: " + configuration.toUpperCase());
-            if (doc.getElementsByTagName(configuration).getLength() > 0) {
-                Node destConfigNode = dest.importNode(doc.getElementsByTagName(configuration).item(0), true);
-                if(configuration.equalsIgnoreCase("properties")) {
-                    NodeList propertyChildren = destConfigNode.getChildNodes();
-                    for(int i=1;i<propertyChildren.getLength();i=i+2) {
-                        Node property = propertyChildren.item(i);
-                        if(property.getNodeName().contains("DiskUsageProperty")) {
-                            logger.info("Disk usage property found and discarded");
-                            property.getParentNode().removeChild(property);
-                            break;
-                        }
-                        if(property.getNodeName().contains("promoted__builds")) {
-                            logger.info("promoted__builds property found and discarded");
-                            property.getParentNode().removeChild(property);
-                            break;
-                        }
-                    }
+    private void copyConfigurations() {
+        try {
+            getDestJob().setDescription(job.getDescription());
+        } catch (IOException ex) {
+           logger.severe("Error setting description");
+           logger.log(Level.SEVERE, ex.getMessage(), ex);
+        }
+        try {
+            getDestJob().setTriggers(new ArrayList<>(job.getTriggers().values()));
+        } catch (IOException ex) {
+            logger.severe("Error adding triggers");
+            logger.log(Level.SEVERE, ex.getMessage(), ex);
+        }
+        List<String> propertiesToRemove=new ArrayList<>();
+        propertiesToRemove.add("DiskUsageProperty");
+        propertiesToRemove.add("hudson-plugins-promoted_builds-JobPropertyImpl");
+        List<JobProperty<? super FreeStyleProject>> sourceProperties=job.getAllProperties();
+        for(JobProperty<? super FreeStyleProject> property: sourceProperties){
+            try {
+                if(!propertiesToRemove.contains(property.getDescriptor().getJsonSafeClassName())){
+                    getDestJob().addProperty(property);
                 }
-                flowDefinition.appendChild(destConfigNode);
+                else{
+                    appendToScript("\n\\\\ Discarded: "+property.getDescriptor().getDisplayName());
+                }
+            } catch (IOException ex) {
+                logger.severe("Error adding property "+property);
+                logger.log(SEVERE, ex.getMessage(), ex);
             }
         }
+        // flowDefinition.appendChild(destConfigNode); FIXME
     }
 
     /**
      * Transforms label to node block.
      */
     private void transformLabel() {
-        String label = "";
-        if (doc.getElementsByTagName("assignedNode").getLength() > 0) {
-            label = doc.getElementsByTagName("assignedNode").item(0).getTextContent();
+        String label = job.getAssignedLabelString();
+        if (label!=null) {
             if(firstJob) {
                 appendToScript("\nnode ('" + label + "') { \n");
             } else {
@@ -269,17 +254,15 @@ public class Transformer {
      * @param commitMessage Commit message if Jenkinsfile is to be committed to SCM.
      */
     private void appendScriptToXML(boolean commitJenkinsfile, String commitMessage) {
+        FlowDefinition fd;
         if(commitJenkinsfile) {
+            fd= new CpsScmFlowDefinition(scm,"Jenkinsfile");
             new SCMUtil().pushJenkinsfile(script.toString(), scmURL, scmBranch, scmCredentialsId, commitMessage, scmType);
-            flowDefinition.appendChild(writeCPSFlow());
-        } else {
-            Element definition = dest.createElement("definition");
-            definition.setAttribute("class", "org.jenkinsci.plugins.workflow.cps.CpsFlowDefinition");
-            Element scriptDefinition = dest.createElement("script");
-            scriptDefinition.setTextContent(script.toString());
-            definition.appendChild(scriptDefinition);
-            flowDefinition.appendChild(definition);
         }
+        else{
+            fd=new CpsFlowDefinition(script.toString(),true);
+        }
+        destJob.setDefinition(fd);
     }
 
     /**
@@ -288,24 +271,18 @@ public class Transformer {
      * @param tag Name of tag to extract.
      * @return Element derived from node by given tag name.
      */
-    public Element getElementByTag(Node node, String tag) {
+/*    public Element getElementByTag(Node node, String tag) {
         return (Element) ((Element) node).getElementsByTagName(tag).item(0);
     }
-
+*/
     /**
      * Write complete transformed configuration to input stream object.
      */
-    private void writeConfiguration() {
+    private void saveJob() {
         try {
-            javax.xml.transform.Transformer transformer = TransformerFactory.newInstance().newTransformer();
-            transformer.setOutputProperty(OutputKeys.OMIT_XML_DECLARATION, "yes");
-            transformer.setOutputProperty(OutputKeys.INDENT, "yes");
-            transformer.setOutputProperty("{http://xml.apache.org/xslt}indent-amount", "2");
-            ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
-            transformer.transform(new DOMSource(dest), new StreamResult(outputStream));
-            is = new ByteArrayInputStream(outputStream.toByteArray());
+            getDestJob().save();
             logger.info("Transformation for job " + currentJobName + " completed successfully");
-        } catch (Exception e) {
+        } catch (IOException e) {
             logger.severe("Exception occurred: " + e.getMessage());
         }
     }
@@ -341,32 +318,20 @@ public class Transformer {
     public void setScmCredentialsId(String scmCredentialsId) {
         this.scmCredentialsId = scmCredentialsId;
     }
-
-    /**
-     * Write CPS Flow XML structure for SCM type defined.
-     *
-     * @return Element object definition with XML
-     */
-    private Element writeCPSFlow() {
-        try {
-            Class pluginClass = Plugins.getPluginClass(scmType);
-            if(pluginClass != null) {
-                Constructor<Plugins> pluginConstructor = pluginClass.getConstructor();
-                Plugins plugin = pluginConstructor.newInstance();
-                return plugin.writeCPSFlow(dest, scmURL, scmBranch, scmCredentialsId);
-            }
-        } catch (IllegalAccessException | IllegalArgumentException | InstantiationException | NoSuchMethodException | SecurityException | InvocationTargetException e) {
-            e.printStackTrace();
-        }
-        return null;
-    }
-
+    
     public void setOnlyBuildTrigger(boolean value) {
         onlyBuildTrigger = value;
     }
 
     public boolean getOnlyBuildTrigger() {
         return onlyBuildTrigger;
+    }
+
+    /**
+     * @return the destJob
+     */
+    public org.jenkinsci.plugins.workflow.job.WorkflowJob getDestJob() {
+        return destJob;
     }
 
 }

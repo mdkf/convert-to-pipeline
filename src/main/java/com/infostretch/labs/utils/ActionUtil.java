@@ -111,26 +111,24 @@ public class ActionUtil {
             params.put("downStream", convertDownStream);
             params.put("commitJenkinsfile", commitJenkinsfile);
             params.put("commitMessage", commitMessage);
-
+            Transformer transformer = new Transformer(params);
             TopLevelItem newJob;
             newName = defineName(newName, job.getName());
             if (job.getParent().getClass().equals(Folder.class)) {
                 Folder folder = (Folder) job.getParent();
-                Transformer transformer = new Transformer(params);
-                transformer.performFreeStyleTransformation();
-                newJob = folder.createProjectFromXML(newName, transformer.getStream());
+                transformer.performFreeStyleTransformation(newName);
+                //newJob = folder.createProjectFromXML(newName, transformer.getStream()); FIXME
             } else {
-                Transformer transformer = new Transformer(params);
-                transformer.performFreeStyleTransformation();
-                InputStream is=transformer.getStream();
+                transformer.performFreeStyleTransformation(newName);
+                //InputStream is=transformer.getStream();
                 //String s= org.apache.commons.io.IOUtils.toString(is);
                         //(is, StandardCharsets.UTF_8);
-                newJob = Jenkins.getInstance().createProjectFromXML(newName, is);
+                //newJob = Jenkins.getInstance().createProjectFromXML(newName, is);
             }
-            Jenkins.getInstance().reload();
-            response.sendRedirect2(newJob.getAbsoluteUrl());
+            //Jenkins.getInstance().reload();
+            response.sendRedirect2(transformer.getDestJob().getAbsoluteUrl());
         }
-        catch (IOException | InterruptedException | ReactorException e) {
+        catch (IOException e) {
             e.printStackTrace();
         }
     }

@@ -18,6 +18,10 @@
 package com.infostretch.labs.transformers;
 
 import com.infostretch.labs.utils.TransformerUtil;
+import static com.infostretch.labs.utils.TransformerUtil.doIt;
+import hudson.model.Descriptor;
+import hudson.tasks.Publisher;
+import hudson.util.DescribableList;
 import org.w3c.dom.Element;
 import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
@@ -32,7 +36,7 @@ import org.w3c.dom.NodeList;
 
 public class PublisherTransformer {
 
-    private Transformer transformer;
+    private final Transformer transformer;
 
     /**
      * This boolean value defines if any steps are added to publish steps.
@@ -60,38 +64,18 @@ public class PublisherTransformer {
      * Such cases will have onlyBuildTrigger NOT being set to false.
      */
     protected void convertPublishers() {
-        if (transformer.doc.getElementsByTagName("publishers").getLength() > 0) {
-            Element publishers = (Element) transformer.doc.getElementsByTagName("publishers").item(0);
-            NodeList publishersList = publishers.getChildNodes();
-            transformer.publishSteps = new StringBuffer();
+        DescribableList<Publisher,Descriptor<Publisher>> publishers=transformer.job.getPublishersList();
+        if (publishers.size()>0) {
             transformer.setOnlyBuildTrigger(true);
-            if (publishersList.getLength() > 0) {
-                transformer.publishSteps.append("\n\tstage ('"+transformer.currentJobName+" - Post build actions') {");
-                transformer.publishSteps.append("\n/*\nPlease note this is a direct conversion of post-build actions. \nIt may not necessarily work/behave in the same way as post-build actions work.\nA logic review is suggested.\n*/");
-            }
-
-            for (int i = 1; i < publishersList.getLength(); i = i + 2) {
-                Node node = publishersList.item(i);
-                String result = TransformerUtil.doIt(node, transformer);
+            transformer.publishSteps.append("\n\tstage ('"+transformer.currentJobName+" - Post build actions') {");
+            transformer.publishSteps.append("\n/*\nPlease note this is a direct conversion of post-build actions. \nIt may not necessarily work/behave in the same way as post-build actions work.\nA logic review is suggested.\n*/");
+            for (Publisher p:publishers){
+                String result = doIt(p, transformer);
                 if (result!=null){
                     transformer.publishSteps.append(result);
                 }
             }
-
-            if (transformer.buildersList.getLength() > 0) {
-                if (transformer.jdk != null && !transformer.jdk.getTextContent().equals("(System)")) {
-                    transformer.buildSteps.append(" \n\t}\n}");
-                } else {
-                    transformer.buildSteps.append(" \n\t}");
-                }
-            }
-            transformer.appendToScript(transformer.buildSteps.toString());
-            if (publishersList.getLength() > 0) {
-                transformer.publishSteps.append(" \n\t}");
-            }
-            if(!transformer.getOnlyBuildTrigger()) {
-            transformer.appendToScript(transformer.publishSteps.toString());
-            }
+            transformer.publishSteps.append(" \n\t}");
         }
     }
 }

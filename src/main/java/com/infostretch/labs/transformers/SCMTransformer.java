@@ -20,10 +20,14 @@ package com.infostretch.labs.transformers;
 import com.infostretch.labs.plugins.Plugins;
 import com.infostretch.labs.utils.PluginClass;
 import com.infostretch.labs.utils.PluginIgnoredClass;
+import com.infostretch.labs.utils.TransformerUtil;
+import static com.infostretch.labs.utils.TransformerUtil.doIt;
+import hudson.scm.SCM;
 import org.apache.commons.text.WordUtils;
 import org.w3c.dom.Node;
 
 import java.lang.reflect.Constructor;
+import java.util.Collection;
 
 /**
  * SCMTransformer handles the conversion of SCMs in
@@ -34,8 +38,9 @@ import java.lang.reflect.Constructor;
 
 public class SCMTransformer {
     
-    private Transformer transformer;
-    private Node scm;
+    private final Transformer transformer;
+    //private Node scm;
+    private SCM scm;
 
     /**
      * Initialise local Transformer variable. This constructor is called in main Transformer class.
@@ -50,27 +55,25 @@ public class SCMTransformer {
      * Calls respective convert SCM methods to convert FreeStyle Job SCM Configurations.
      */
     protected void convertSCM() {
-        if (transformer.doc.getElementsByTagName("scm").getLength() > 0) {
-            scm = transformer.doc.getElementsByTagName("scm").item(0);
-            String scmType = scm.getAttributes().getNamedItem("class").getTextContent();
-            try {
-                Class pluginClass = Plugins.getPluginClass(scmType);
-                if(pluginClass != null) {
-                    Constructor<Plugins> pluginConstructor = pluginClass.getConstructor(Transformer.class, Node.class);
-                    Plugins plugin = pluginConstructor.newInstance(transformer, scm);
-                    plugin.transform();
-                } else {
-                    PluginIgnoredClass ignoredPlugin = PluginIgnoredClass.searchByValue(scmType);
-                    if(ignoredPlugin == null) {
-                        transformer.appendToScript(transformer.currentJobName+ " - Checkout", "\n// Unable to convert SCM referring to \"" + scmType + "\". Please verify and convert manually if required.");
-                    }
-                }
-            } catch (Exception e) {
-                e.printStackTrace();
+        scm=transformer.job.getScm();
+        if (getScm() != null){
+            String result=doIt(getScm(), transformer);
+            if (result!=null){
+                transformer.appendToScript(transformer.currentJobName+ " - Checkout "+result);
+            }
+            else{
+                transformer.appendToScript(transformer.currentJobName+ " - Checkout", "\n// Unable to convert SCM referring to \"" + getScm().getType() + "\". Please verify and convert manually if required.");
             }
             if(transformer.firstJob) {
-                transformer.setScmType(scmType);
-            }
+                transformer.setScmType(getScm().getType());
+            }   
         }
+    }
+
+    /**
+     * @return the scm
+     */
+    public SCM getScm() {
+        return scm;
     }
 }
