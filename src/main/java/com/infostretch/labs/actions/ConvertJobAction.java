@@ -36,7 +36,7 @@ import org.kohsuke.stapler.*;
  */
 
 public class ConvertJobAction implements Action, Describable<ConvertJobAction> {
-    private FreeStyleProject job;
+    private final FreeStyleProject job;
 
     ConvertJobAction(FreeStyleProject job) {
         this.job = job;

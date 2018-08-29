@@ -71,11 +71,6 @@
                     </f:block>
                 </f:section>
             </f:form>
-            <div style="text-align: center; position: absolute; bottom:50px; width:100%; left:0;">
-                <a href="https://www.infostretch.com/" target="_blank">
-                    <l:icon src="${rootURL}/plugin/convert-to-pipeline/images/infostretch_logo.png"/>
-                </a>
-            </div>
         </l:main-panel>
     </l:layout>
 </j:jelly>

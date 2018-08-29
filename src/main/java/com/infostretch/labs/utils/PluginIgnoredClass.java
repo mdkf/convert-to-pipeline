@@ -25,7 +25,7 @@ public enum PluginIgnoredClass {
     BuildTrigger("hudson.tasks.BuildTrigger"),
     NullSCM("hudson.scm.NullSCM");
 
-    private String className;
+    private final String className;
 
     PluginIgnoredClass(String className) {
         this.className = className;

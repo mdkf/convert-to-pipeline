@@ -18,18 +18,17 @@
 package com.infostretch.labs.utils;
 
 import com.cloudbees.hudson.plugins.folder.Folder;
-import com.infostretch.labs.transformers.Transformer;
+import org.jenkinsci.convertpipeline.transformers.Transformer;
 import hudson.model.FreeStyleProject;
 import hudson.model.Item;
 import hudson.model.TopLevelItem;
 import java.io.IOException;
-import java.io.InputStream;
 import java.util.HashMap;
 import java.util.Map;
 import javax.servlet.ServletException;
 import jenkins.model.Jenkins;
+import static jenkins.model.Jenkins.getInstance;
 import org.acegisecurity.AccessDeniedException;
-import org.jvnet.hudson.reactor.ReactorException;
 import org.kohsuke.stapler.StaplerRequest;
 import org.kohsuke.stapler.StaplerResponse;
 
@@ -41,7 +40,7 @@ import org.kohsuke.stapler.StaplerResponse;
 
 public class ActionUtil {
 
-    private FreeStyleProject job;
+    private final FreeStyleProject job;
 
     /**
      * Constructor to initialise FreeStyleProject.
@@ -63,7 +62,7 @@ public class ActionUtil {
     public static boolean validateForm(String newName, String originalJob) {
         Item item = null;
         try {
-            FreeStyleProject orgJob = (FreeStyleProject) Jenkins.getInstance().getItemByFullName(originalJob);
+            FreeStyleProject orgJob = (FreeStyleProject) getInstance().getItemByFullName(originalJob);
             if(orgJob != null) {
                 newName = defineName(newName, orgJob.getName());
                 if(orgJob.getParent().getClass().equals(Folder.class)) {
@@ -116,7 +115,7 @@ public class ActionUtil {
             newName = defineName(newName, job.getName());
             if (job.getParent().getClass().equals(Folder.class)) {
                 Folder folder = (Folder) job.getParent();
-                transformer.performFreeStyleTransformation(newName);
+                transformer.performFreeStyleTransformation(newName, folder);
                 //newJob = folder.createProjectFromXML(newName, transformer.getStream()); FIXME
             } else {
                 transformer.performFreeStyleTransformation(newName);
@@ -126,7 +125,7 @@ public class ActionUtil {
                 //newJob = Jenkins.getInstance().createProjectFromXML(newName, is);
             }
             //Jenkins.getInstance().reload();
-            response.sendRedirect2(transformer.getDestJob().getAbsoluteUrl());
+            response.sendRedirect2(transformer.getDestJob().getAbsoluteUrl()+"configure");
         }
         catch (IOException e) {
             e.printStackTrace();

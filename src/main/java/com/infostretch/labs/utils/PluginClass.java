@@ -27,7 +27,7 @@ public enum PluginClass {
     TestNG("hudson.plugins.testng.Publisher"),
     Git("hudson.plugins.git.GitSCM");
 
-    private String nodeTag;
+    private final String nodeTag;
 
     PluginClass(String nodeTag) {
         this.nodeTag = nodeTag;

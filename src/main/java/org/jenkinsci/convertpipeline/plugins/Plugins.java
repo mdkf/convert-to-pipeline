@@ -15,18 +15,18 @@
  * For any inquiry or need additional information, please contact labs_support@infostretch.com
  *******************************************************************************/
 
-package com.infostretch.labs.plugins;
+package org.jenkinsci.convertpipeline.plugins;
 
-import com.infostretch.labs.transformers.Transformer;
 import com.infostretch.labs.utils.PluginClass;
+import static com.infostretch.labs.utils.PluginClass.searchByTag;
 import com.infostretch.labs.utils.PluginIgnoredClass;
-import org.apache.commons.text.WordUtils;
-import org.eclipse.jgit.transport.CredentialsProvider;
-import org.w3c.dom.Document;
-import org.w3c.dom.Element;
-import org.w3c.dom.Node;
+import static com.infostretch.labs.utils.PluginIgnoredClass.searchByValue;
+import hudson.tasks.Builder;
 import java.io.File;
-import org.w3c.dom.NodeList;
+import static java.lang.Class.forName;
+import static org.apache.commons.text.WordUtils.capitalize;
+import org.jenkinsci.convertpipeline.transformers.Transformer;
+
 
 /**
  * Super class for plugins. This class is extended by every plugin whose transformation support is to be added.
@@ -41,21 +41,19 @@ public abstract class Plugins {
      */
     protected Transformer transformer;
 
-    /**
-     * Node block from which the properties are to be read and converted.
-     */
-    protected Node node;
+    //protected Builder builder;
 
     /**
      * Parameterized constructor. This will be invoked by super() in each plugin class.
      * This constructor is implemented in plugin classes that will be performing transformations.
      *
      * @param transformer Transformer instance whose variables need to be read and written to.
-     * @param node Node block from which the properties are to be read and converted.
+     * @param builder
      */
-    public Plugins(Transformer transformer, Node node) {
+
+    public Plugins(Transformer transformer, Builder builder) {
         this.transformer = transformer;
-        this.node = node;
+        //this.builder = builder;
     }
 
     /**
@@ -67,8 +65,11 @@ public abstract class Plugins {
 
     /**
      * Method to be overridden by subclass when transforming build steps.
+     * @return 
      */
-    public void transform() {}
+    public String transform() {
+        return null;
+    }
 
     /**
      * Method to be overridden by subclass when pushing Jenkinsfile.
@@ -81,60 +82,25 @@ public abstract class Plugins {
      * @param commitMessage Commit message to be included in commit when pushing Jenkinsfile.
      * @param credentialsProvider Credentials to use for clone and push operations.
      */
-    public void pushJenkinsfile(File workSpace, String script, String url, String branchName, String commitMessage, CredentialsProvider credentialsProvider){}
-
-    /**
-     * Write CPS Flow XML structure for SCM type defined.
-     *
-     * @param dest Document object in which the new XML elements are to be defined.
-     * @param scmURL URL of SCM where new pipeline job will point for Jenkinsfile.
-     * @param branchName Branch name of SCM where new pipeline job will point for Jenkinsfile.
-     * @param scmCredentialsId Credentials id to use to checkout Jenkinsfile by new pipeline job.
-     *
-     * @return Element object definition with XML
-     */
-    public Element writeCPSFlow(Document dest, String scmURL, String branchName, String scmCredentialsId) {
-        return null;
-    }
-
-    /**
-     * Helper method to extract Element by tag name from node initialised by constructor.
-     * @param tag Tag name to find in node.
-     * @return Element object extracted from node.
-     */
-    protected final Element getElementByTag(String tag) {
-        return (Element) ((Element) node).getElementsByTagName(tag).item(0);
-    }
-    
-    protected final NodeList getElementsByTag(String tag) {
-        return ((Element) node).getElementsByTagName(tag);
-    }
-
-    /**
-     * Helper method to extract Element from given node by tag name.
-     * @param node Node from which the Element needs to be extracted.
-     * @param tag Tag name to find in node.
-     * @return Element object extracted from node.
-     */
-    protected final Element getElementByTag(Node node, String tag) {
-        return (Element) ((Element) node).getElementsByTagName(tag).item(0);
-    }
+    //public void pushJenkinsfile(File workSpace, String script, String url, String branchName, String commitMessage, CredentialsProvider credentialsProvider){}
 
     /**
      * Helper method to append string to buildSteps in transformer.
      * @param string String to be appended to build steps.
      */
+    /*
     protected final void appendBuildSteps(String string) {
         transformer.buildSteps.append(string);
-    }
+    } */
 
     /**
      * Helper method to append string to publishSteps in transformer.
      * @param string String to be appended to publish steps.
      */
+    /*
     protected final void appendPublishSteps(String string) {
         transformer.publishSteps.append(string);
-    }
+    } */
 
     /**
      * Returns Class that matches nodeName.
@@ -148,25 +114,21 @@ public abstract class Plugins {
      */
     public static final Class getPluginClass(String nodeName) {
         try {
-            PluginIgnoredClass ignoredPlugin = PluginIgnoredClass.searchByValue(nodeName);
+            PluginIgnoredClass ignoredPlugin = searchByValue(nodeName);
             if(ignoredPlugin == null) {
-                PluginClass pluginClass = PluginClass.searchByTag(nodeName);
+                PluginClass pluginClass = searchByTag(nodeName);
                 String pluginName = "";
                 if(pluginClass == null) {
                     String[] splitNodeName = nodeName.split("\\.");
-                    pluginName = "com.infostretch.labs.plugins." + WordUtils.capitalize(splitNodeName[splitNodeName.length-1]);
+                    pluginName = "org.jenkinsci.convertpipeline.plugins." + capitalize(splitNodeName[splitNodeName.length-1]);
                 } else {
-                    pluginName = "com.infostretch.labs.plugins." + pluginClass.toString();
+                    pluginName = "org.jenkinsci.convertpipeline.plugins." + pluginClass.toString();
                 }
-                return Class.forName(pluginName);
+                return forName(pluginName);
             }
         }
         catch (ClassNotFoundException e)
         {
-        }
-        
-        catch (Error | Exception e) {
-            e.printStackTrace();
         }
         return null;
     }
