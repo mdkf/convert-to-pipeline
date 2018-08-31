@@ -51,21 +51,6 @@
                             </j:forEach>
                         </select>
                     </f:entry>
-                    <f:entry title="${%Field.Recursive}" field="downStream">
-                        <f:checkbox name="downStream" field="downStream" default="true"/>
-                    </f:entry>
-                    <f:block>
-                        <f:nested>
-                            <f:section title="${%Section.Options.Title}">
-                                <f:entry title="${%Field.Jenkinsfile}" field="commitJFile">
-                                    <f:checkbox name="commitJFile" field="commitJFile" default="false" />
-                                </f:entry>
-                                <f:entry title="${%Label.CommitMessage}" field="commitMessage">
-                                    <f:textbox name="commitMessage" value="${%Field.CommitMessage}"/>
-                                </f:entry>
-                            </f:section>
-                        </f:nested>
-                    </f:block>
                     <f:block>
                         <f:submit name="Submit" value="${%Button.Submit}"/>
                     </f:block>
